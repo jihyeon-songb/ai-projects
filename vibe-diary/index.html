@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Code Review Dashboard</title>
+    <link rel="stylesheet" href="./styles.css">
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Code Review</p>
+          <h1 id="review-title">Review Dashboard</h1>
+        </div>
+        <div class="topbar-actions">
+          <label class="file-button">
+            <input id="json-input" type="file" accept="application/json,.json">
+            JSON
+          </label>
+          <button id="reset-button" type="button">Reset</button>
+        </div>
+      </header>
+
+      <main class="dashboard">
+        <aside class="sidebar" aria-label="Review files">
+          <section class="summary-panel">
+            <div class="status-row">
+              <span id="status-badge" class="badge">Status</span>
+              <span id="risk-badge" class="badge badge-muted">Risk</span>
+            </div>
+            <p id="review-overview" class="overview"></p>
+            <div class="recommendation">
+              <span>Recommendation</span>
+              <strong id="recommendation-label"></strong>
+            </div>
+          </section>
+
+          <section class="file-panel">
+            <div class="section-heading">
+              <h2>Files</h2>
+              <span id="file-count">0</span>
+            </div>
+            <div id="file-list" class="file-list"></div>
+          </section>
+        </aside>
+
+        <section class="content-area">
+          <section class="metric-grid" aria-label="Review metrics">
+            <article class="metric-card">
+              <span>Score</span>
+              <strong id="metric-score">0</strong>
+            </article>
+            <article class="metric-card">
+              <span>Files</span>
+              <strong id="metric-files">0</strong>
+            </article>
+            <article class="metric-card">
+              <span>Findings</span>
+              <strong id="metric-findings">0</strong>
+            </article>
+            <article class="metric-card">
+              <span>Reviewed</span>
+              <strong id="metric-date">-</strong>
+            </article>
+          </section>
+
+          <section class="severity-panel">
+            <div class="section-heading">
+              <h2>Severity</h2>
+              <span id="severity-total">0</span>
+            </div>
+            <div id="severity-bars" class="severity-bars"></div>
+          </section>
+
+          <section class="review-workspace">
+            <div class="findings-column">
+              <div class="section-heading">
+                <h2>Findings</h2>
+                <span id="visible-findings-count">0</span>
+              </div>
+              <div id="filter-tabs" class="filter-tabs" role="tablist"></div>
+              <div id="findings-list" class="findings-list"></div>
+            </div>
+
+            <article class="detail-panel" aria-live="polite">
+              <div class="detail-header">
+                <div>
+                  <span id="detail-severity" class="badge">Severity</span>
+                  <h2 id="detail-title">Select a finding</h2>
+                </div>
+                <span id="detail-category" class="category-label"></span>
+              </div>
+
+              <dl class="detail-meta">
+                <div>
+                  <dt>Location</dt>
+                  <dd id="detail-location">-</dd>
+                </div>
+                <div>
+                  <dt>Blocking</dt>
+                  <dd id="detail-blocking">-</dd>
+                </div>
+              </dl>
+
+              <section class="detail-section">
+                <h3>Message</h3>
+                <p id="detail-message"></p>
+              </section>
+
+              <section class="detail-section">
+                <h3>Impact</h3>
+                <p id="detail-impact"></p>
+              </section>
+
+              <section class="detail-section">
+                <h3>Suggestion</h3>
+                <p id="detail-suggestion"></p>
+                <pre id="detail-patch" class="code-block"></pre>
+              </section>
+
+              <section class="detail-section">
+                <h3>Snippet</h3>
+                <pre id="detail-snippet" class="code-block"></pre>
+              </section>
+            </article>
+          </section>
+
+          <section class="actions-panel">
+            <div class="section-heading">
+              <h2>Actions</h2>
+              <span id="action-count">0</span>
+            </div>
+            <div id="action-list" class="action-list"></div>
+          </section>
+        </section>
+      </main>
+    </div>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
