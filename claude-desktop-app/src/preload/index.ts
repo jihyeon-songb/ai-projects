@@ -1,11 +1,20 @@
 import { contextBridge, ipcRenderer } from 'electron'
 
+export interface QuestionSpec {
+  question: string
+  header: string
+  multiSelect?: boolean
+  options: { label: string; description?: string }[]
+}
+
 export interface PermissionRequest {
   id: string
   toolName: string
   summary: string
   detail: string
   cwd?: string
+  kind?: 'tool' | 'question'
+  questions?: QuestionSpec[]
 }
 
 export interface NotifyPayload {
@@ -34,9 +43,11 @@ const api = {
     ipcRenderer.on('claude:permission-resolved', l)
     return () => ipcRenderer.removeListener('claude:permission-resolved', l)
   },
-  /** 사용자의 허용/취소 결정 전송 */
-  decide(id: string, decision: 'allow' | 'deny'): void {
-    ipcRenderer.send('claude:permission-decision', id, decision)
+  /**
+   * 사용자의 결정 전송. 'answer' 면 payload=picksJson(질문별 선택 라벨 배열).
+   */
+  decide(id: string, decision: 'allow' | 'deny' | 'answer', payload?: string): void {
+    ipcRenderer.send('claude:permission-decision', id, decision, payload)
   },
   /** 인터랙티브 영역 호버 상태 전달 → 마우스 통과 토글 */
   setInteractive(interactive: boolean): void {

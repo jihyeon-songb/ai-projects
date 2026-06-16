@@ -263,6 +263,56 @@ body,
   text-overflow: ellipsis;
 }
 
+/* ── 선택지(AskUserQuestion) ───────────────── */
+.question {
+  margin-top: 12px;
+}
+.question-text {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 7px;
+}
+.question-options {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.option {
+  -webkit-app-region: no-drag;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  text-align: left;
+  padding: 9px 11px;
+  border-radius: 10px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  background: var(--field);
+  cursor: pointer;
+  transition: filter 0.12s ease, border-color 0.12s ease;
+}
+.option:hover {
+  filter: brightness(0.98);
+}
+.option-selected {
+  border-color: var(--ink);
+  background: #eef0ff;
+}
+.option-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.option-desc {
+  font-size: 11px;
+  color: var(--muted);
+}
+.btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
 /* 버튼 */
 .card-actions {
   display: flex;

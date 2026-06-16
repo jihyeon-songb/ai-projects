@@ -134,13 +134,14 @@ export default function App() {
   }, [])
 
   const decide = useCallback(
-    (key: string, id: string, decision: 'allow' | 'deny') => {
-      window.claudie.decide(id, decision)
+    (key: string, id: string, decision: 'allow' | 'deny' | 'answer', payload?: string) => {
+      window.claudie.decide(id, decision, payload)
       patch(key, (s) => {
         const permissions = s.permissions.filter((x) => x.id !== id)
-        // 마지막 권한을 허용했다면 그 세션의 클로드가 다시 작업을 시작한다.
+        // 허용/답변 후 마지막 항목이면 그 세션의 클로드가 다시 작업을 시작한다.
+        const resumed = decision === 'allow' || decision === 'answer'
         const workingSince =
-          decision === 'allow' && permissions.length === 0 ? Date.now() : s.workingSince
+          resumed && permissions.length === 0 ? Date.now() : s.workingSince
         return { ...s, permissions, workingSince }
       })
     },
@@ -181,6 +182,7 @@ export default function App() {
                 label={label}
                 onAllow={() => decide(key, current.id, 'allow')}
                 onDeny={() => decide(key, current.id, 'deny')}
+                onSubmit={(picks) => decide(key, current.id, 'answer', JSON.stringify(picks))}
               />
             )
           }

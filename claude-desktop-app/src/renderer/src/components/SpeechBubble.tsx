@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import type { PermissionRequest } from '../types'
 
 type Props =
@@ -17,6 +18,8 @@ type Props =
       pending: number
       onAllow: () => void
       onDeny: () => void
+      /** AskUserQuestion 답: 질문별 선택 라벨 배열 */
+      onSubmit: (picks: string[][]) => void
       label?: string
     }
   | {
@@ -89,6 +92,21 @@ export default function SpeechBubble(props: Props) {
     )
   }
 
+  // ── AskUserQuestion 선택지 카드 ─────────────────────────
+  if (props.request.kind === 'question' && props.request.questions?.length) {
+    return (
+      <div className="bubble">
+        <SessionLabel label={props.label} />
+        <QuestionCard
+          request={props.request}
+          pending={props.pending}
+          onSubmit={props.onSubmit}
+          onDeny={props.onDeny}
+        />
+      </div>
+    )
+  }
+
   // ── 권한 요청 카드 ──────────────────────────────────────
   const { request, pending, onAllow, onDeny } = props
   return (
@@ -116,6 +134,83 @@ export default function SpeechBubble(props: Props) {
             허용
           </button>
         </div>
+      </div>
+    </div>
+  )
+}
+
+/** AskUserQuestion 선택지 폼. 질문별로 옵션을 고르고 '보내기'로 제출. */
+function QuestionCard({
+  request,
+  pending,
+  onSubmit,
+  onDeny
+}: {
+  request: PermissionRequest
+  pending: number
+  onSubmit: (picks: string[][]) => void
+  onDeny: () => void
+}) {
+  const questions = request.questions ?? []
+  // picks[i] = i번째 질문에서 고른 라벨들
+  const [picks, setPicks] = useState<string[][]>(() => questions.map(() => []))
+
+  const toggle = (qi: number, label: string, multi: boolean): void => {
+    setPicks((prev) => {
+      const next = prev.map((a) => [...a])
+      const cur = next[qi]
+      if (multi) {
+        const at = cur.indexOf(label)
+        if (at >= 0) cur.splice(at, 1)
+        else cur.push(label)
+      } else {
+        next[qi] = cur[0] === label ? [] : [label]
+      }
+      return next
+    })
+  }
+
+  const ready = questions.every((_, i) => picks[i]?.length > 0)
+
+  return (
+    <div className="card interactive">
+      <div className="card-head">
+        <div className="card-icon">?</div>
+        <div className="card-titles">
+          <div className="card-title">Claude가 선택지를 물어봐요</div>
+          <div className="card-sub">{questions.length}개 질문</div>
+        </div>
+        {pending > 1 && <span className="card-badge">+{pending - 1}</span>}
+      </div>
+
+      {questions.map((q, qi) => (
+        <div className="question" key={qi}>
+          <div className="question-text">{q.question || q.header}</div>
+          <div className="question-options">
+            {q.options.map((o) => {
+              const selected = picks[qi]?.includes(o.label)
+              return (
+                <button
+                  key={o.label}
+                  className={`option${selected ? ' option-selected' : ''}`}
+                  onClick={() => toggle(qi, o.label, !!q.multiSelect)}
+                >
+                  <span className="option-label">{o.label}</span>
+                  {o.description && <span className="option-desc">{o.description}</span>}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      ))}
+
+      <div className="card-actions">
+        <button className="btn btn-soft" onClick={onDeny}>
+          취소
+        </button>
+        <button className="btn btn-primary" disabled={!ready} onClick={() => onSubmit(picks)}>
+          보내기
+        </button>
       </div>
     </div>
   )

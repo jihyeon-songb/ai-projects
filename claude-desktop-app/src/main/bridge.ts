@@ -34,6 +34,14 @@ export interface PermissionPayload {
 
 export type Decision = 'allow' | 'deny'
 
+/** AskUserQuestion tool_input.questions 한 항목 */
+export interface QuestionSpec {
+  question: string
+  header: string
+  multiSelect?: boolean
+  options: { label: string; description?: string }[]
+}
+
 export interface PermissionRequest {
   id: string
   toolName: string
@@ -42,10 +50,13 @@ export interface PermissionRequest {
   cwd?: string
   sessionId?: string
   raw: PermissionPayload
+  /** 'question' 이면 선택지 카드, 아니면 일반 허용/거부 */
+  kind?: 'tool' | 'question'
+  questions?: QuestionSpec[]
 }
 
 interface Pending {
-  resolve: (decision: Decision) => void
+  resolve: (result: { decision: Decision; reason?: string }) => void
   timer: NodeJS.Timeout
 }
 
@@ -82,7 +93,7 @@ export class Bridge extends EventEmitter {
   stop(): void {
     for (const [, p] of this.pending) {
       clearTimeout(p.timer)
-      p.resolve('allow') // 앱 종료 시 fail-open
+      p.resolve({ decision: 'allow' }) // 앱 종료 시 fail-open
     }
     this.pending.clear()
     this.server?.close()
@@ -93,14 +104,25 @@ export class Bridge extends EventEmitter {
     }
   }
 
-  /** 렌더러에서 사용자가 버튼을 눌렀을 때 호출 */
-  resolvePermission(id: string, decision: Decision): void {
+  /**
+   * 렌더러에서 사용자가 버튼을 눌렀을 때 호출.
+   * decision 'answer' = AskUserQuestion 답(picksJson) → deny + reason(조합한 답)으로 변환.
+   */
+  resolvePermission(id: string, decision: Decision | 'answer', payload?: string): void {
     const p = this.pending.get(id)
     if (!p) return
     clearTimeout(p.timer)
     this.pending.delete(id)
-    p.resolve(decision)
+    if (decision === 'answer') {
+      p.resolve({ decision: 'deny', reason: answerReason(this.questionsById.get(id), payload) })
+      this.questionsById.delete(id)
+      return
+    }
+    p.resolve({ decision })
   }
+
+  /** 질문 요청의 questions 를 id 로 보관 (답 조합 시 라벨 매핑용) */
+  private questionsById = new Map<string, QuestionSpec[] | undefined>()
 
   private writeDiscovery(): void {
     writeFileSync(
@@ -136,16 +158,18 @@ export class Bridge extends EventEmitter {
 
     if (req.url === '/permission') {
       const request = buildRequest(body as PermissionPayload)
-      const decision = await new Promise<Decision>((resolve) => {
+      if (request.kind === 'question') this.questionsById.set(request.id, request.questions)
+      const result = await new Promise<{ decision: Decision; reason?: string }>((resolve) => {
         const timer = setTimeout(() => {
           this.pending.delete(request.id)
+          this.questionsById.delete(request.id)
           this.emit('permission-timeout', request.id)
-          resolve('allow') // 무응답 시 fail-open
+          resolve({ decision: 'allow' }) // 무응답 시 fail-open
         }, PERMISSION_TIMEOUT_MS)
         this.pending.set(request.id, { resolve, timer })
         this.emit('permission', request)
       })
-      json(res, 200, { decision })
+      json(res, 200, result)
       return
     }
 
@@ -171,16 +195,75 @@ function json(res: http.ServerResponse, code: number, obj: unknown): void {
 function buildRequest(payload: PermissionPayload): PermissionRequest {
   const toolName = payload.tool_name ?? 'unknown'
   const input = payload.tool_input ?? {}
-  const { summary, detail } = humanize(toolName, input)
-  return {
+  const base = {
     id: randomUUID(),
     toolName,
-    summary,
-    detail,
     cwd: payload.cwd,
     sessionId: payload.session_id,
     raw: payload
   }
+
+  // AskUserQuestion: 선택지 카드로 보여준다
+  if (toolName === 'AskUserQuestion') {
+    const questions = parseQuestions(input.questions)
+    if (questions.length) {
+      return {
+        ...base,
+        kind: 'question',
+        questions,
+        summary: questions[0].question,
+        detail: ''
+      }
+    }
+  }
+
+  const { summary, detail } = humanize(toolName, input)
+  return { ...base, kind: 'tool', summary, detail }
+}
+
+/** tool_input.questions 를 안전하게 QuestionSpec[] 로 파싱 */
+function parseQuestions(raw: unknown): QuestionSpec[] {
+  if (!Array.isArray(raw)) return []
+  const out: QuestionSpec[] = []
+  for (const q of raw) {
+    if (!q || typeof q !== 'object') continue
+    const opts = Array.isArray((q as any).options) ? (q as any).options : []
+    const options = opts
+      .map((o: any) => ({ label: String(o?.label ?? ''), description: String(o?.description ?? '') }))
+      .filter((o: { label: string }) => o.label)
+    if (!options.length) continue
+    out.push({
+      question: String((q as any).question ?? ''),
+      header: String((q as any).header ?? ''),
+      multiSelect: !!(q as any).multiSelect,
+      options
+    })
+  }
+  return out
+}
+
+/**
+ * 렌더러가 보낸 picksJson(질문별 선택 라벨 배열) + 원본 questions 로
+ * 모델에 줄 답 문자열을 만든다. deny 의 reason 으로 들어가 답으로 쓰인다.
+ */
+function answerReason(questions: QuestionSpec[] | undefined, picksJson?: string): string {
+  let picks: string[][] = []
+  try {
+    picks = picksJson ? JSON.parse(picksJson) : []
+  } catch {
+    picks = []
+  }
+  const qs = questions ?? []
+  const lines = qs
+    .map((q, i) => {
+      const chosen = (picks[i] ?? []).filter(Boolean)
+      if (!chosen.length) return ''
+      const head = q.header || q.question || `질문 ${i + 1}`
+      return `「${head}」 선택: ${chosen.join(', ')}`
+    })
+    .filter(Boolean)
+  if (!lines.length) return '사용자가 선택을 취소했어요.'
+  return `${lines.join('\n')}\n사용자가 컴패니언에서 위와 같이 선택했어요. 이 선택대로 진행해줘.`
 }
 
 /** 도구 종류별로 말풍선에 보여줄 요약/상세를 만든다. */

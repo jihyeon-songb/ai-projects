@@ -43,10 +43,13 @@ async function bootstrap(): Promise<void> {
   })
 
   // ── 렌더러 → 브릿지/윈도우 ───────────────────────────────────
-  ipcMain.on('claude:permission-decision', (_e, id: string, decision: Decision) => {
-    bridge.resolvePermission(id, decision)
-    send('claude:permission-resolved', id)
-  })
+  ipcMain.on(
+    'claude:permission-decision',
+    (_e, id: string, decision: Decision | 'answer', payload?: string) => {
+      bridge.resolvePermission(id, decision, payload)
+      send('claude:permission-resolved', id)
+    }
+  )
 
   // 인터랙티브 영역 호버 시 마우스 통과 토글
   ipcMain.on('claudie:set-interactive', (_e, interactive: boolean) => {

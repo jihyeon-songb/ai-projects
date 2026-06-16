@@ -1,3 +1,10 @@
+export interface QuestionSpec {
+  question: string
+  header: string
+  multiSelect?: boolean
+  options: { label: string; description?: string }[]
+}
+
 export interface PermissionRequest {
   id: string
   toolName: string
@@ -5,6 +12,8 @@ export interface PermissionRequest {
   detail: string
   cwd?: string
   sessionId?: string
+  kind?: 'tool' | 'question'
+  questions?: QuestionSpec[]
 }
 
 export interface NotifyPayload {

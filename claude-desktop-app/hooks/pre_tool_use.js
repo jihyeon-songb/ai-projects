@@ -22,14 +22,17 @@ function readStdin() {
   })
 }
 
-/** Claude Code PreToolUse 결정 JSON. allow=권한 통과, deny=차단(+이유 모델에 전달). */
-function buildOutput(decision) {
-  const reason = '클로디에서 사용자가 요청을 취소했어요.'
+/**
+ * Claude Code PreToolUse 결정 JSON. allow=권한 통과, deny=차단(+이유 모델에 전달).
+ * reason 이 오면(예: AskUserQuestion 답) 그걸 모델에 전달하는 이유로 쓴다.
+ */
+function buildOutput(decision, reason) {
+  const text = reason || '클로디에서 사용자가 요청을 취소했어요.'
   return {
     hookSpecificOutput: {
       hookEventName: 'PreToolUse',
       permissionDecision: decision === 'allow' ? 'allow' : 'deny',
-      ...(decision === 'allow' ? {} : { permissionDecisionReason: reason })
+      ...(decision === 'allow' ? {} : { permissionDecisionReason: text })
     }
   }
 }
@@ -47,14 +50,16 @@ async function main() {
     payload = {}
   }
   let decision = 'allow'
+  let reason
   try {
     const res = await post('/permission', payload, WAIT_MS)
     decision = res && res.decision === 'deny' ? 'deny' : 'allow'
+    reason = res && res.reason
   } catch {
     decision = 'allow' // fail-open: 앱이 없거나 오류면 진행
   }
 
-  emit(buildOutput(decision))
+  emit(buildOutput(decision, reason))
 }
 
 main().finally(() => process.exit(0))
