@@ -2,6 +2,11 @@
 
 화면 위에 떠다니는 캐릭터 **클로디**가 Claude Code와 연동됩니다.
 
+| idle | working | permission | done |
+|:---:|:---:|:---:|:---:|
+| ![idle](assets/claudie/idle.png) | ![working](assets/claudie/working.png) | ![permission](assets/claudie/permission.png) | ![done](assets/claudie/done.png) |
+| 대기 | 작업 중 | 권한 요청 | 완료 |
+
 - Claude Code가 **도구 권한을 요청**(PreToolUse)하면 클로디 옆에 `허용 / 거부` 버튼이 떠서 실제 실행을 제어합니다.
 - Claude Code가 **응답을 끝내면**(Stop) 클로디가 "작업 완료!" 말풍선 + OS 알림을 띄웁니다.
 
