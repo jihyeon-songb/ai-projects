@@ -13,7 +13,7 @@ export interface PermissionRequest {
   summary: string
   detail: string
   cwd?: string
-  kind?: 'tool' | 'question'
+  kind?: 'tool' | 'question' | 'plan'
   questions?: QuestionSpec[]
 }
 

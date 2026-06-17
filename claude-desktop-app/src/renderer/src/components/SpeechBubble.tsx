@@ -107,6 +107,37 @@ export default function SpeechBubble(props: Props) {
     )
   }
 
+  // ── ExitPlanMode 계획 승인 카드 ─────────────────────────
+  if (props.request.kind === 'plan') {
+    const { request, pending, onAllow, onDeny } = props
+    return (
+      <div className="bubble">
+        <SessionLabel label={props.label} />
+        <div className="card interactive">
+          <div className="card-head">
+            <div className="card-icon">▶</div>
+            <div className="card-titles">
+              <div className="card-title">Claude가 계획을 다 세웠어요</div>
+              <div className="card-sub">진행할까요?</div>
+            </div>
+            {pending > 1 && <span className="card-badge">+{pending - 1}</span>}
+          </div>
+          <div className="card-code">{request.detail}</div>
+          <div className="question-options">
+            <button className="option" onClick={onAllow}>
+              <span className="option-label">응, 이대로 진행해</span>
+              <span className="option-desc">계획을 실행해요</span>
+            </button>
+            <button className="option" onClick={onDeny}>
+              <span className="option-label">아니, 더 다듬어줘</span>
+              <span className="option-desc">계획 모드 유지하고 수정해요</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   // ── 권한 요청 카드 ──────────────────────────────────────
   const { request, pending, onAllow, onDeny } = props
   return (

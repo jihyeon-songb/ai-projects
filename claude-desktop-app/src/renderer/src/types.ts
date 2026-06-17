@@ -12,7 +12,7 @@ export interface PermissionRequest {
   detail: string
   cwd?: string
   sessionId?: string
-  kind?: 'tool' | 'question'
+  kind?: 'tool' | 'question' | 'plan'
   questions?: QuestionSpec[]
 }
 

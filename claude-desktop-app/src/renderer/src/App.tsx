@@ -181,7 +181,16 @@ export default function App() {
                 pending={s.permissions.length}
                 label={label}
                 onAllow={() => decide(key, current.id, 'allow')}
-                onDeny={() => decide(key, current.id, 'deny')}
+                onDeny={() =>
+                  decide(
+                    key,
+                    current.id,
+                    'deny',
+                    current.kind === 'plan'
+                      ? '사용자가 계획을 거절했어요. 계획 모드를 유지한 채로 계획을 더 다듬어줘.'
+                      : undefined
+                  )
+                }
                 onSubmit={(picks) => decide(key, current.id, 'answer', JSON.stringify(picks))}
               />
             )

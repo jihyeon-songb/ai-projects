@@ -50,8 +50,8 @@ export interface PermissionRequest {
   cwd?: string
   sessionId?: string
   raw: PermissionPayload
-  /** 'question' 이면 선택지 카드, 아니면 일반 허용/거부 */
-  kind?: 'tool' | 'question'
+  /** 'question'=선택지 카드, 'plan'=계획 승인 카드, 'tool'=일반 허용/거부 */
+  kind?: 'tool' | 'question' | 'plan'
   questions?: QuestionSpec[]
 }
 
@@ -116,6 +116,11 @@ export class Bridge extends EventEmitter {
     if (decision === 'answer') {
       p.resolve({ decision: 'deny', reason: answerReason(this.questionsById.get(id), payload) })
       this.questionsById.delete(id)
+      return
+    }
+    // deny + payload = 모델에 전달할 이유(예: 계획 다듬기 요청)
+    if (decision === 'deny' && payload) {
+      p.resolve({ decision: 'deny', reason: payload })
       return
     }
     p.resolve({ decision })
@@ -214,6 +219,17 @@ function buildRequest(payload: PermissionPayload): PermissionRequest {
         summary: questions[0].question,
         detail: ''
       }
+    }
+  }
+
+  // ExitPlanMode: 계획 승인 카드로 보여준다 (훅은 allow=진행 / deny=다듬기 두 결과만 가능)
+  if (toolName === 'ExitPlanMode' || toolName === 'exit_plan_mode') {
+    const plan = typeof input.plan === 'string' ? input.plan : ''
+    return {
+      ...base,
+      kind: 'plan',
+      summary: '계획을 다 세웠어요. 진행할까요?',
+      detail: plan || '(계획 내용 없음)'
     }
   }
 
