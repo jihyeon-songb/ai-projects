@@ -11,6 +11,14 @@ const { post } = require('./bridge-client')
 // 사용자의 응답을 기다리는 최대 시간(ms). config 의 hook timeout 보다 작게.
 const WAIT_MS = 10 * 60 * 1000
 
+// 사용자 결정 없이 자동 허용할 도구들 (비파괴적: 읽기/파일수정).
+// 여기 없는 도구(Bash·네트워크·AskUserQuestion·ExitPlanMode·MCP·미지)는 클로디 알림으로 묻는다.
+const AUTO_ALLOW = new Set([
+  'Read', 'Glob', 'Grep', 'LS',
+  'Edit', 'MultiEdit', 'Write', 'NotebookEdit',
+  'TodoWrite'
+])
+
 function readStdin() {
   return new Promise((resolve) => {
     let data = ''
@@ -49,6 +57,12 @@ async function main() {
   } catch {
     payload = {}
   }
+  // 자동 허용 도구는 브릿지/알림 없이 즉시 통과 (앱이 꺼져 있어도 동작).
+  if (AUTO_ALLOW.has(payload.tool_name)) {
+    emit(buildOutput('allow'))
+    return
+  }
+
   let decision = 'allow'
   let reason
   try {
