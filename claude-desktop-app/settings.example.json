@@ -1,0 +1,27 @@
+{
+  "//": "이 파일 내용을 ~/.claude/settings.json (전역) 또는 <repo>/.claude/settings.json (프로젝트별)의 hooks 에 합치고 <앱경로>를 실제 경로로 바꾸세요. timeout 단위는 '초'.",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"<앱경로>/hooks/pre_tool_use.js\"",
+            "timeout": 660
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"<앱경로>/hooks/notify.js\""
+          }
+        ]
+      }
+    ]
+  }
+}

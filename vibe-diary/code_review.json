@@ -1,0 +1,343 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schemas/code-review-result.schema.json",
+  "title": "CodeReviewResult",
+  "description": "A UI-friendly schema for displaying code review results.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "reviewId",
+    "status",
+    "summary",
+    "metrics",
+    "findings",
+    "reviewedAt"
+  ],
+  "properties": {
+    "reviewId": {
+      "type": "string",
+      "description": "Unique identifier for this review result.",
+      "examples": [
+        "review_20260505_001"
+      ]
+    },
+    "status": {
+      "type": "string",
+      "description": "Overall review status for badges and filtering.",
+      "enum": [
+        "passed",
+        "needs_changes",
+        "failed",
+        "in_progress"
+      ]
+    },
+    "summary": {
+      "type": "object",
+      "description": "Top-level information shown in the review header.",
+      "additionalProperties": false,
+      "required": [
+        "title",
+        "overview",
+        "riskLevel",
+        "recommendation"
+      ],
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "Short display title.",
+          "examples": [
+            "Authentication PR review"
+          ]
+        },
+        "overview": {
+          "type": "string",
+          "description": "One or two sentence summary for the main review panel."
+        },
+        "riskLevel": {
+          "type": "string",
+          "description": "Overall risk indicator for color-coded UI.",
+          "enum": [
+            "low",
+            "medium",
+            "high",
+            "critical"
+          ]
+        },
+        "recommendation": {
+          "type": "string",
+          "description": "Recommended next action.",
+          "enum": [
+            "approve",
+            "approve_with_comments",
+            "request_changes",
+            "block_merge"
+          ]
+        }
+      }
+    },
+    "metrics": {
+      "type": "object",
+      "description": "Numeric values useful for cards, charts, and counters.",
+      "additionalProperties": false,
+      "required": [
+        "score",
+        "filesReviewed",
+        "findingsTotal",
+        "findingsBySeverity"
+      ],
+      "properties": {
+        "score": {
+          "type": "integer",
+          "description": "Review quality score from 0 to 100.",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "filesReviewed": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "findingsTotal": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "findingsBySeverity": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "critical",
+            "high",
+            "medium",
+            "low",
+            "info"
+          ],
+          "properties": {
+            "critical": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "high": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "medium": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "low": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "info": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        }
+      }
+    },
+    "findings": {
+      "type": "array",
+      "description": "Review findings ordered by display priority.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "severity",
+          "category",
+          "title",
+          "message",
+          "location",
+          "impact",
+          "suggestion",
+          "display"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Stable finding identifier."
+          },
+          "severity": {
+            "type": "string",
+            "enum": [
+              "critical",
+              "high",
+              "medium",
+              "low",
+              "info"
+            ]
+          },
+          "category": {
+            "type": "string",
+            "description": "Finding group for tabs or filters.",
+            "enum": [
+              "bug",
+              "security",
+              "performance",
+              "accessibility",
+              "maintainability",
+              "test",
+              "style",
+              "documentation"
+            ]
+          },
+          "title": {
+            "type": "string",
+            "description": "Short issue title shown in lists."
+          },
+          "message": {
+            "type": "string",
+            "description": "Detailed explanation of the issue."
+          },
+          "location": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "file",
+              "line"
+            ],
+            "properties": {
+              "file": {
+                "type": "string",
+                "description": "Relative file path."
+              },
+              "line": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "column": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "endLine": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "snippet": {
+                "type": "string",
+                "description": "Small code excerpt for inline preview."
+              }
+            }
+          },
+          "impact": {
+            "type": "string",
+            "description": "User-facing risk or consequence."
+          },
+          "suggestion": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "description"
+            ],
+            "properties": {
+              "description": {
+                "type": "string",
+                "description": "Recommended fix in plain language."
+              },
+              "patch": {
+                "type": "string",
+                "description": "Optional diff or replacement snippet."
+              }
+            }
+          },
+          "display": {
+            "type": "object",
+            "description": "UI hints that do not affect the review logic.",
+            "additionalProperties": false,
+            "required": [
+              "priority",
+              "isBlocking"
+            ],
+            "properties": {
+              "priority": {
+                "type": "integer",
+                "description": "Lower numbers should appear first.",
+                "minimum": 1
+              },
+              "isBlocking": {
+                "type": "boolean",
+                "description": "Whether this finding should block approval."
+              },
+              "badgeLabel": {
+                "type": "string",
+                "description": "Short label for compact UI badges."
+              },
+              "collapsedByDefault": {
+                "type": "boolean",
+                "default": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "reviewedFiles": {
+      "type": "array",
+      "description": "Per-file review status for sidebars or file trees.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "file",
+          "status",
+          "findingCount"
+        ],
+        "properties": {
+          "file": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "clean",
+              "has_findings",
+              "skipped"
+            ]
+          },
+          "findingCount": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "default": []
+    },
+    "actions": {
+      "type": "array",
+      "description": "Suggested next steps that can be rendered as checklist items.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "label",
+          "type"
+        ],
+        "properties": {
+          "label": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "fix",
+              "test",
+              "discuss",
+              "document",
+              "approve"
+            ]
+          },
+          "findingId": {
+            "type": "string",
+            "description": "Optional related finding id."
+          }
+        }
+      },
+      "default": []
+    },
+    "reviewedAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp for display and sorting."
+    }
+  }
+}
