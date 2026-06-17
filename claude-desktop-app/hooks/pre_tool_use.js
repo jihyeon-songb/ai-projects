@@ -7,6 +7,7 @@
 //
 // 앱이 꺼져 있거나 오류가 나면 "허용(fail-open)" 으로 흘려보내 Claude 를 막지 않는다.
 const { post } = require('./bridge-client')
+const { loadRules, decide } = require('./permissions')
 
 // 사용자의 응답을 기다리는 최대 시간(ms). config 의 hook timeout 보다 작게.
 const WAIT_MS = 10 * 60 * 1000
@@ -57,11 +58,29 @@ async function main() {
   } catch {
     payload = {}
   }
-  // 자동 허용 도구는 브릿지/알림 없이 즉시 통과 (앱이 꺼져 있어도 동작).
-  if (AUTO_ALLOW.has(payload.tool_name)) {
+  // settings.json 권한 규칙(allow/deny/ask) 존중. 터미널이 안 묻는 건 알림도 안 띄움.
+  const verdict = decide(payload.tool_name, payload.tool_input, loadRules(payload.cwd))
+  if (verdict === 'deny') {
+    emit(buildOutput('deny'))
+    return
+  }
+  // Auto-Accept(shift+Tab) / bypass 모드면 터미널이 아무것도 안 물어봄 → 컴패니언도 조용히 통과.
+  // (deny 규칙은 위에서 이미 존중함.)
+  const mode = payload.permission_mode
+  if (mode === 'auto' || mode === 'bypassPermissions') {
     emit(buildOutput('allow'))
     return
   }
+  if (verdict === 'allow') {
+    emit(buildOutput('allow'))
+    return
+  }
+  // 규칙에 ask 가 없고(=null) 비파괴 기본 도구면 조용히 통과 (앱이 꺼져 있어도 동작).
+  if (verdict !== 'ask' && AUTO_ALLOW.has(payload.tool_name)) {
+    emit(buildOutput('allow'))
+    return
+  }
+  // ask 또는 (매치 없음 + 비AUTO_ALLOW) → 아래 브릿지 알림 경로로 진행.
 
   let decision = 'allow'
   let reason
