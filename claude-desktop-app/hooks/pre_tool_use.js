@@ -82,6 +82,9 @@ async function main() {
   }
   // ask 또는 (매치 없음 + 비AUTO_ALLOW) → 아래 브릿지 알림 경로로 진행.
 
+  // 어느 터미널에서 떴는지(클릭 시 그 창으로 포커스하려고). 없으면 undefined.
+  payload.term_program = process.env.TERM_PROGRAM
+
   let decision = 'allow'
   let reason
   try {

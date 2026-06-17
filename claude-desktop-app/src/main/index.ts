@@ -1,6 +1,26 @@
 import { app, BrowserWindow, ipcMain, Menu, Notification, screen } from 'electron'
+import { spawn } from 'node:child_process'
 import { Bridge, type Decision } from './bridge'
 import { createCharacterWindow } from './window'
+
+// TERM_PROGRAM → macOS 앱 이름. ponytail: 흔한 것만, 빠지면 .app 떼고 그대로 시도.
+const TERM_APPS: Record<string, string> = {
+  Apple_Terminal: 'Terminal',
+  'iTerm.app': 'iTerm',
+  vscode: 'Visual Studio Code',
+  Hyper: 'Hyper',
+  WezTerm: 'WezTerm',
+  ghostty: 'Ghostty',
+  Tabby: 'Tabby',
+  WarpTerminal: 'Warp'
+}
+
+/** 알림 클릭 시 클로디가 떠 있는 터미널 창으로 포커스. 실패해도 무시(알림이 이미 알려줌). */
+function focusTerminal(term?: string): void {
+  if (!term || process.platform !== 'darwin') return
+  const appName = TERM_APPS[term] ?? term.replace(/\.app$/, '')
+  spawn('open', ['-a', appName]).on('error', () => {})
+}
 
 let win: BrowserWindow | null = null
 const bridge = new Bridge()
@@ -36,6 +56,17 @@ async function bootstrap(): Promise<void> {
 
   bridge.on('permission', (request) => {
     send('claude:permission-request', request)
+  })
+
+  // ExitPlanMode: 카드로 안 막고 OS 알림만. 클릭하면 터미널로 가서 직접 선택.
+  bridge.on('plan-ready', (request) => {
+    if (!Notification.isSupported()) return
+    const n = new Notification({
+      title: '클로디 · 계획 준비됨',
+      body: '터미널에서 진행 방식을 선택하세요'
+    })
+    n.on('click', () => focusTerminal(request.termProgram))
+    n.show()
   })
 
   bridge.on('permission-timeout', (id: string) => {

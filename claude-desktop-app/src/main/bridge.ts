@@ -30,6 +30,8 @@ export interface PermissionPayload {
   tool_name?: string
   tool_use_id?: string
   tool_input?: Record<string, unknown>
+  /** 훅을 띄운 터미널 (TERM_PROGRAM). 알림 클릭 시 그 앱으로 포커스. */
+  term_program?: string
 }
 
 export type Decision = 'allow' | 'deny'
@@ -50,9 +52,10 @@ export interface PermissionRequest {
   cwd?: string
   sessionId?: string
   raw: PermissionPayload
-  /** 'question'=선택지 카드, 'plan'=계획 승인 카드, 'tool'=일반 허용/거부 */
+  /** 'question'=선택지 카드, 'plan'=계획 준비 알림, 'tool'=일반 허용/거부 */
   kind?: 'tool' | 'question' | 'plan'
   questions?: QuestionSpec[]
+  termProgram?: string
 }
 
 interface Pending {
@@ -163,6 +166,12 @@ export class Bridge extends EventEmitter {
 
     if (req.url === '/permission') {
       const request = buildRequest(body as PermissionPayload)
+      // ExitPlanMode: 막지 않는다. 알림만 띄우고 즉시 통과 → 터미널 네이티브 plan UI에서 선택.
+      if (request.kind === 'plan') {
+        this.emit('plan-ready', request)
+        json(res, 200, { decision: 'allow' })
+        return
+      }
       if (request.kind === 'question') this.questionsById.set(request.id, request.questions)
       const result = await new Promise<{ decision: Decision; reason?: string }>((resolve) => {
         const timer = setTimeout(() => {
@@ -197,14 +206,21 @@ function json(res: http.ServerResponse, code: number, obj: unknown): void {
 }
 
 /** PreToolUse 페이로드를 사람이 읽을 수 있는 요청으로 변환 */
-function buildRequest(payload: PermissionPayload): PermissionRequest {
-  const toolName = payload.tool_name ?? 'unknown'
-  const input = payload.tool_input ?? {}
+export function buildRequest(payload: PermissionPayload): PermissionRequest {
+  // Claude 버전/MCP 에 따라 필드명이 다를 수 있어 폴백을 둔다.
+  const p = payload as Record<string, unknown>
+  const toolName =
+    payload.tool_name ?? (p.tool as string) ?? (p.name as string) ?? '알 수 없는 도구'
+  const input = (payload.tool_input ??
+    (p.input as Record<string, unknown>) ??
+    (p.arguments as Record<string, unknown>) ??
+    {}) as Record<string, unknown>
   const base = {
     id: randomUUID(),
     toolName,
     cwd: payload.cwd,
     sessionId: payload.session_id,
+    termProgram: payload.term_program,
     raw: payload
   }
 
@@ -288,26 +304,44 @@ function humanize(
   input: Record<string, unknown>
 ): { summary: string; detail: string } {
   const str = (v: unknown): string => (typeof v === 'string' ? v : '')
+  const i = input as any
 
   // 셸 명령
-  const command = str(input.command) || str((input as any).cmd)
-  if (command) {
-    return { summary: `명령을 실행하려 해요`, detail: command }
-  }
+  const command = str(input.command) || str(i.cmd)
+  if (command) return { summary: '명령을 실행하려 해요', detail: command }
 
-  // 파일 수정/패치
-  const filePath =
-    str(input.file_path) || str((input as any).path) || str((input as any).filename)
-  if (filePath) {
-    return { summary: `파일을 수정하려 해요`, detail: filePath }
-  }
-  const patch = str((input as any).patch) || str((input as any).input)
+  // 파일 다루기
+  const filePath = str(input.file_path) || str(i.path) || str(i.filename) || str(i.notebook_path)
+  if (filePath) return { summary: '파일을 다루려 해요', detail: filePath }
+
+  // 패치/수정
+  const patch = str(i.patch)
   if (patch) {
     const firstLine = patch.split('\n').find((l) => l.trim()) ?? patch
-    return { summary: `파일을 수정하려 해요`, detail: firstLine.slice(0, 200) }
+    return { summary: '파일을 수정하려 해요', detail: firstLine.slice(0, 200) }
   }
 
-  // 그 외: 입력을 통째로 보여줌
-  const detail = Object.keys(input).length ? JSON.stringify(input, null, 2) : '(상세 정보 없음)'
-  return { summary: `${toolName} 권한을 요청해요`, detail }
+  // 웹 접근
+  const url = str(input.url)
+  if (url) return { summary: '웹에 접근하려 해요', detail: url }
+
+  // 검색/질의/하위작업
+  const query = str(input.query) || str(i.pattern) || str(i.prompt) || str(i.description)
+  if (query) return { summary: `${toolName} 실행`, detail: query }
+
+  // 그 외: input 키:값을 사람이 읽게 정리 (JSON 덤프 대신)
+  const keys = Object.keys(input)
+  if (keys.length) {
+    const detail = keys
+      .map((k) => {
+        const v = (input as any)[k]
+        const s = typeof v === 'string' ? v : JSON.stringify(v)
+        return `${k}: ${s.length > 120 ? s.slice(0, 120) + '…' : s}`
+      })
+      .join('\n')
+    return { summary: `${toolName} 권한을 요청해요`, detail }
+  }
+
+  // 입력이 정말 없을 때도 최소한 무슨 도구인지 알린다
+  return { summary: `${toolName} 권한을 요청해요`, detail: `${toolName} 도구를 실행하려 해요` }
 }
