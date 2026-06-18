@@ -166,12 +166,7 @@ export class Bridge extends EventEmitter {
 
     if (req.url === '/permission') {
       const request = buildRequest(body as PermissionPayload)
-      // ExitPlanMode: 막지 않는다. 알림만 띄우고 즉시 통과 → 터미널 네이티브 plan UI에서 선택.
-      if (request.kind === 'plan') {
-        this.emit('plan-ready', request)
-        json(res, 200, { decision: 'allow' })
-        return
-      }
+      // plan(ExitPlanMode)·question·tool 모두 카드로 띄우고 사용자가 고를 때까지 보류.
       if (request.kind === 'question') this.questionsById.set(request.id, request.questions)
       const result = await new Promise<{ decision: Decision; reason?: string }>((resolve) => {
         const timer = setTimeout(() => {

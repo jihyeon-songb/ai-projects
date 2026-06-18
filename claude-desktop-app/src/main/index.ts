@@ -56,17 +56,17 @@ async function bootstrap(): Promise<void> {
 
   bridge.on('permission', (request) => {
     send('claude:permission-request', request)
-  })
 
-  // ExitPlanMode: 카드로 안 막고 OS 알림만. 클릭하면 터미널로 가서 직접 선택.
-  bridge.on('plan-ready', (request) => {
-    if (!Notification.isSupported()) return
-    const n = new Notification({
-      title: '클로디 · 계획 준비됨',
-      body: '터미널에서 진행 방식을 선택하세요'
-    })
-    n.on('click', () => focusTerminal(request.termProgram))
-    n.show()
+    // OS 네이티브 알림: 카드를 못 봐도(앱 비포커스 등) 권한 요청을 놓치지 않게.
+    // 클릭하면 터미널로 포커스해 카드/프롬프트에서 직접 결정.
+    if (Notification.isSupported()) {
+      const n = new Notification({
+        title: '클로디 · 권한 요청',
+        body: String(request?.summary || request?.toolName || '권한이 필요해요').slice(0, 160)
+      })
+      n.on('click', () => focusTerminal(request?.termProgram))
+      n.show()
+    }
   })
 
   bridge.on('permission-timeout', (id: string) => {

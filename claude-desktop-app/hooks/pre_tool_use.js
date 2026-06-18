@@ -12,13 +12,10 @@ const { loadRules, decide } = require('./permissions')
 // 사용자의 응답을 기다리는 최대 시간(ms). config 의 hook timeout 보다 작게.
 const WAIT_MS = 10 * 60 * 1000
 
-// 사용자 결정 없이 자동 허용할 도구들 (비파괴적: 읽기/파일수정).
-// 여기 없는 도구(Bash·네트워크·AskUserQuestion·ExitPlanMode·MCP·미지)는 클로디 알림으로 묻는다.
-const AUTO_ALLOW = new Set([
-  'Read', 'Glob', 'Grep', 'LS',
-  'Edit', 'MultiEdit', 'Write', 'NotebookEdit',
-  'TodoWrite'
-])
+// 카드로 물어볼 도구 = "내가 골라야 하는" 요청뿐.
+// 그 외 모든 도구(Bash·Read·Edit·WebFetch·MCP·미지 도구…)는 카드 안 띄우고 조용히 통과.
+// 위험 명령은 settings deny 규칙으로 막을 것. 사용자가 ask 규칙을 두면 그것도 카드로 뜸.
+const CARD_TOOLS = new Set(['ExitPlanMode', 'exit_plan_mode', 'AskUserQuestion'])
 
 function readStdin() {
   return new Promise((resolve) => {
@@ -75,12 +72,12 @@ async function main() {
     emit(buildOutput('allow'))
     return
   }
-  // 규칙에 ask 가 없고(=null) 비파괴 기본 도구면 조용히 통과 (앱이 꺼져 있어도 동작).
-  if (verdict !== 'ask' && AUTO_ALLOW.has(payload.tool_name)) {
+  // ask 규칙이 아니고 카드 대상 도구도 아니면 조용히 통과 (앱이 꺼져 있어도 동작).
+  if (verdict !== 'ask' && !CARD_TOOLS.has(payload.tool_name)) {
     emit(buildOutput('allow'))
     return
   }
-  // ask 또는 (매치 없음 + 비AUTO_ALLOW) → 아래 브릿지 알림 경로로 진행.
+  // ask 규칙이거나 카드 대상 도구(ExitPlanMode·AskUserQuestion) → 아래 브릿지 카드 경로.
 
   // 어느 터미널에서 떴는지(클릭 시 그 창으로 포커스하려고). 없으면 undefined.
   payload.term_program = process.env.TERM_PROGRAM
