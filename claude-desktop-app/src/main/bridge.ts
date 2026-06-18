@@ -273,7 +273,7 @@ function parseQuestions(raw: unknown): QuestionSpec[] {
  * 렌더러가 보낸 picksJson(질문별 선택 라벨 배열) + 원본 questions 로
  * 모델에 줄 답 문자열을 만든다. deny 의 reason 으로 들어가 답으로 쓰인다.
  */
-function answerReason(questions: QuestionSpec[] | undefined, picksJson?: string): string {
+export function answerReason(questions: QuestionSpec[] | undefined, picksJson?: string): string {
   let picks: string[][] = []
   try {
     picks = picksJson ? JSON.parse(picksJson) : []
@@ -294,7 +294,7 @@ function answerReason(questions: QuestionSpec[] | undefined, picksJson?: string)
 }
 
 /** 도구 종류별로 말풍선에 보여줄 요약/상세를 만든다. */
-function humanize(
+export function humanize(
   toolName: string,
   input: Record<string, unknown>
 ): { summary: string; detail: string } {
