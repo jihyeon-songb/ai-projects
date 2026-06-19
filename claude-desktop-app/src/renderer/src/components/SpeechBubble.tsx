@@ -214,26 +214,28 @@ function QuestionCard({
         {pending > 1 && <span className="card-badge">+{pending - 1}</span>}
       </div>
 
-      {questions.map((q, qi) => (
-        <div className="question" key={qi}>
-          <div className="question-text">{q.question || q.header}</div>
-          <div className="question-options">
-            {q.options.map((o) => {
-              const selected = picks[qi]?.includes(o.label)
-              return (
-                <button
-                  key={o.label}
-                  className={`option${selected ? ' option-selected' : ''}`}
-                  onClick={() => toggle(qi, o.label, !!q.multiSelect)}
-                >
-                  <span className="option-label">{o.label}</span>
-                  {o.description && <span className="option-desc">{o.description}</span>}
-                </button>
-              )
-            })}
+      <div className="question-scroll">
+        {questions.map((q, qi) => (
+          <div className="question" key={qi}>
+            <div className="question-text">{q.question || q.header}</div>
+            <div className="question-options">
+              {q.options.map((o) => {
+                const selected = picks[qi]?.includes(o.label)
+                return (
+                  <button
+                    key={o.label}
+                    className={`option${selected ? ' option-selected' : ''}`}
+                    onClick={() => toggle(qi, o.label, !!q.multiSelect)}
+                  >
+                    <span className="option-label">{o.label}</span>
+                    {o.description && <span className="option-desc">{o.description}</span>}
+                  </button>
+                )
+              })}
+            </div>
           </div>
-        </div>
-      ))}
+        ))}
+      </div>
 
       <div className="card-actions">
         <button className="btn btn-soft" onClick={onDeny}>

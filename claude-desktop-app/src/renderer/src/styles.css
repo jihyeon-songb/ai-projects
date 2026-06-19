@@ -168,6 +168,17 @@ body,
   box-shadow: 0 18px 50px rgba(30, 40, 70, 0.26);
   padding: 16px;
   animation: km-pop 0.35s ease;
+  display: flex;
+  flex-direction: column;
+  /* 캐릭터(하단)+여백 자리를 빼서 카드 윗부분(헤더)이 화면 위로 안 잘리게 함.
+     stage가 flex-end+overflow:hidden이라 넘치면 위가 잘림. */
+  max-height: calc(100vh - 200px);
+}
+
+/* 질문 목록만 스크롤, head/actions는 고정 */
+.question-scroll {
+  overflow-y: auto;
+  min-height: 0;
 }
 
 .card-head {
